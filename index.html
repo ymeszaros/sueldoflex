@@ -784,13 +784,12 @@
           <div class="preview-footer">
             <div class="prf-item">
               <div class="prf-n green" id="prev-anual">+$0</div>
-              <div style="font-size:11px;color:rgba(0,201,167,.7);font-weight:700;margin-top:3px;" id="prev-anual-pct">4.2% anual</div>
               <div class="prf-l">Retorno anual est.</div>
             </div>
             <div class="prf-div"></div>
             <div class="prf-item">
-              <div class="prf-n zero">0%</div>
-              <div class="prf-l">Deuda generada</div>
+              <div class="prf-n green" id="prev-rate">0.0%</div>
+              <div class="prf-l">Tasa de retorno</div>
             </div>
           </div>
         </div>
@@ -888,29 +887,53 @@ function formatSueldo(input) {
 function updatePct(val) {
   document.getElementById('pct-display').textContent = val + '%';
 }
+function getFixedBills(s) {
+  // Costos promedio por nivel de ingreso (Chile 2024: SEC, SISS, CNE)
+  if (s < 500000)  return {agua:12000, luz:22000, gas:14000, net:18000};
+  if (s < 800000)  return {agua:14000, luz:26000, gas:17000, net:21000};
+  if (s < 1200000) return {agua:15200, luz:28900, gas:18500, net:22990};
+  if (s < 2000000) return {agua:18000, luz:35000, gas:22000, net:25000};
+  return                  {agua:22000, luz:45000, gas:28000, net:28000};
+}
 function updatePreview() {
   const raw = document.getElementById('f-sueldo').value.replace(/\./g,'').replace(/\D/g,'');
   const sueldo = parseInt(raw) || 0;
   const pct = parseInt(document.getElementById('f-pct').value);
   const fondo = Math.round(sueldo * pct / 100);
-  const cuentas = Math.round(fondo * 0.57);
-  const rem = fondo - cuentas;
+  const B = getFixedBills(sueldo);
+  const TOTAL_BILLS = B.agua + B.luz + B.gas + B.net;
+  const rem = Math.max(0, fondo - TOTAL_BILLS);
+  const cuentas_covered = Math.min(fondo, TOTAL_BILLS);
   const anual = Math.round(rem * 12 * 0.042);
   document.getElementById('prev-fondo').textContent = fondo > 0 ? '$' + fondo.toLocaleString('es-CL') : '$0';
   document.getElementById('prev-sub').textContent = fondo > 0 ? pct + '% de $' + sueldo.toLocaleString('es-CL') : 'Ingresa tu sueldo para ver la proyección';
-  document.getElementById('prev-cuentas').textContent = fondo > 0 ? '$' + cuentas.toLocaleString('es-CL') : '—';
-  document.getElementById('prev-rem').textContent = fondo > 0 ? '$' + rem.toLocaleString('es-CL') : '—';
-  document.getElementById('prev-anual').textContent = fondo > 0 ? '+$' + anual.toLocaleString('es-CL') : '+$0';
-  document.getElementById('bar-cuentas').style.width = fondo > 0 ? (cuentas/fondo*100) + '%' : '0%';
-  document.getElementById('bar-rem').style.width = fondo > 0 ? (rem/fondo*100) + '%' : '0%';
-  // Bills breakdown (proporciones promedio Chile 2024)
+  document.getElementById('prev-cuentas').textContent = fondo > 0 ? '$' + cuentas_covered.toLocaleString('es-CL') : '—';
+  document.getElementById('prev-rem').textContent = fondo > 0 ? (rem > 0 ? '$' + rem.toLocaleString('es-CL') : '$0 — todo a cuentas') : '—';
+  document.getElementById('prev-anual').textContent = fondo > 0 ? (anual > 0 ? '+$' + anual.toLocaleString('es-CL') : '$0') : '+$0';
+  document.getElementById('prev-rate').textContent = rem > 0 ? '4.2%' : '0.0%';
+  document.getElementById('bar-cuentas').style.width = fondo > 0 ? Math.min(100, cuentas_covered/fondo*100) + '%' : '0%';
+  document.getElementById('bar-rem').style.width = fondo > 0 && rem > 0 ? (rem/fondo*100) + '%' : '0%';
+  // Detalle por servicio con cobertura priorizada
   const det = document.getElementById('bills-detail');
   if (fondo > 0) {
     det.style.display = 'block';
-    document.getElementById('bd-agua').textContent = '~$' + Math.round(cuentas*.178).toLocaleString('es-CL');
-    document.getElementById('bd-luz').textContent  = '~$' + Math.round(cuentas*.338).toLocaleString('es-CL');
-    document.getElementById('bd-gas').textContent  = '~$' + Math.round(cuentas*.216).toLocaleString('es-CL');
-    document.getElementById('bd-net').textContent  = '~$' + Math.round(cuentas*.268).toLocaleString('es-CL');
+    const items = [{id:'bd-agua',cost:B.agua},{id:'bd-luz',cost:B.luz},{id:'bd-gas',cost:B.gas},{id:'bd-net',cost:B.net}];
+    let left = fondo;
+    items.forEach(it => {
+      const el = document.getElementById(it.id);
+      if (left >= it.cost) {
+        left -= it.cost;
+        el.textContent = '~$' + it.cost.toLocaleString('es-CL');
+        el.style.color = '';
+      } else if (left > 0) {
+        el.textContent = '$' + left.toLocaleString('es-CL') + ' / $' + it.cost.toLocaleString('es-CL') + ' ⚠';
+        el.style.color = '#f59e0b';
+        left = 0;
+      } else {
+        el.textContent = '$' + it.cost.toLocaleString('es-CL') + ' — sin cubrir ✕';
+        el.style.color = '#f87171';
+      }
+    });
   } else { det.style.display = 'none'; }
 }
 function generateSimilarCases(sueldo, pct) {
@@ -922,11 +945,12 @@ function generateSimilarCases(sueldo, pct) {
   return profiles.map(p => {
     const s = Math.round(sueldo * p.mult / 10000) * 10000 || 800000;
     const fondo = Math.round(s * pct / 100);
-    const rem = Math.round(fondo * 0.43);
+    const Bs = getFixedBills(s);
+    const rem = Math.max(0, fondo - (Bs.agua + Bs.luz + Bs.gas + Bs.net));
     const patrimonio = rem * 12;                          // 12 meses de remanente acumulado
     const retorno_inv = Math.round(patrimonio * 0.042);  // retorno 4.2% anual
     const total = patrimonio + retorno_inv;
-    const cuentas_anual = Math.round(fondo * 0.57) * 12;
+    const cuentas_anual = Math.min(fondo, Bs.agua + Bs.luz + Bs.gas + Bs.net) * 12;
     return {...p, sueldo: s, total, retorno_inv, cuentas_anual};
   });
 }
