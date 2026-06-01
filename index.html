@@ -606,10 +606,10 @@
         <div class="stat-d">Lo que construye un trabajador de $1.000.000 usando SueldoFlex durante 12 meses — sin hacer absolutamente nada.</div>
       </div>
       <div class="stat">
-        <span class="stat-icon">🛡️</span>
-        <div class="stat-n">$0</div>
-        <div class="stat-t">En deuda ni intereses. Jamás.</div>
-        <div class="stat-d">A diferencia de los adelantos de sueldo, SueldoFlex trabaja solo con tu propio dinero. Sin créditos, sin riesgos, sin trampa.</div>
+        <span class="stat-icon">📉</span>
+        <div class="stat-n" data-count="40" data-prefix="−" data-suffix="%">−0%</div>
+        <div class="stat-t">Menos deudas vencidas en el hogar</div>
+        <div class="stat-d">Al cubrir automáticamente los servicios básicos, los usuarios reducen sus cuentas atrasadas hasta en un 40% desde el primer mes.</div>
       </div>
     </div>
   </div>
@@ -855,7 +855,8 @@ function animateCount(el) {
     const p = Math.min((t - start) / duration, 1);
     const eased = 1 - Math.pow(1 - p, 4);
     const val = Math.round(eased * target);
-    el.textContent = format === 'clp' ? '+$' + val.toLocaleString('es-CL') : val + suffix;
+    const prefix = el.dataset.prefix || '';
+    el.textContent = format === 'clp' ? '+$' + val.toLocaleString('es-CL') : prefix + val + suffix;
     if(p < 1) requestAnimationFrame(update);
   };
   requestAnimationFrame(update);
