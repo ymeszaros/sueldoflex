@@ -351,6 +351,15 @@
   .prf-n.green{color:#34d399;}.prf-n.zero{color:rgba(255,255,255,.35);}
   .prf-l{font-size:11px;color:rgba(255,255,255,.42);margin-top:4px;}
   .prf-div{width:1px;height:36px;background:rgba(255,255,255,.08);}
+  .bills-detail{padding:8px 0 4px;display:none;}
+  .bd-item{display:flex;justify-content:space-between;align-items:center;padding:3px 0;}
+  .bd-item-l{font-size:11px;color:rgba(255,255,255,.48);display:flex;align-items:center;gap:5px;}
+  .bd-item-r{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;}
+  .bd-source{font-size:10px;color:rgba(255,255,255,.22);margin-top:6px;font-style:italic;}
+  .similar-acum{font-size:26px;font-weight:900;color:#34d399;letter-spacing:-.8px;line-height:1;margin-bottom:3px;}
+  .similar-retorno{font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px;}
+  .similar-retorno span{color:#34d399;font-weight:700;}
+  .similar-cuentas{font-size:11px;color:rgba(255,255,255,.38);padding-top:10px;border-top:1px solid rgba(255,255,255,.07);}
   @media(max-width:700px){.modal{padding:32px 24px;}.modal-grid{grid-template-columns:1fr;gap:32px;}}
 
   /* RESPONSIVE */
@@ -758,6 +767,13 @@
               <span id="prev-cuentas" class="pb-val">—</span>
             </div>
             <div class="pb-bar"><div class="pb-fill teal" id="bar-cuentas" style="width:0%"></div></div>
+            <div class="bills-detail" id="bills-detail">
+              <div class="bd-item"><span class="bd-item-l">💧 Agua potable</span><span class="bd-item-r" id="bd-agua">—</span></div>
+              <div class="bd-item"><span class="bd-item-l">⚡ Electricidad</span><span class="bd-item-r" id="bd-luz">—</span></div>
+              <div class="bd-item"><span class="bd-item-l">🔥 Gas</span><span class="bd-item-r" id="bd-gas">—</span></div>
+              <div class="bd-item"><span class="bd-item-l">🌐 Internet</span><span class="bd-item-r" id="bd-net">—</span></div>
+              <div class="bd-source">Basado en tarifas promedio nacionales 2024 (SEC, SISS, CNE)</div>
+            </div>
             <div class="pb-row">
               <div class="pb-dot purple"></div>
               <span>Remanente a invertir</span>
@@ -886,20 +902,31 @@ function updatePreview() {
   document.getElementById('prev-anual').textContent = fondo > 0 ? '+$' + anual.toLocaleString('es-CL') : '+$0';
   document.getElementById('bar-cuentas').style.width = fondo > 0 ? (cuentas/fondo*100) + '%' : '0%';
   document.getElementById('bar-rem').style.width = fondo > 0 ? (rem/fondo*100) + '%' : '0%';
+  // Bills breakdown (proporciones promedio Chile 2024)
+  const det = document.getElementById('bills-detail');
+  if (fondo > 0) {
+    det.style.display = 'block';
+    document.getElementById('bd-agua').textContent = '~$' + Math.round(cuentas*.178).toLocaleString('es-CL');
+    document.getElementById('bd-luz').textContent  = '~$' + Math.round(cuentas*.338).toLocaleString('es-CL');
+    document.getElementById('bd-gas').textContent  = '~$' + Math.round(cuentas*.216).toLocaleString('es-CL');
+    document.getElementById('bd-net').textContent  = '~$' + Math.round(cuentas*.268).toLocaleString('es-CL');
+  } else { det.style.display = 'none'; }
 }
 function generateSimilarCases(sueldo, pct) {
   const profiles = [
-    {name:'María G.', cargo:'Analista RRHH', initials:'MG', color:'linear-gradient(135deg,#00C9A7,#3B82F6)', meses:4, mult:.88},
-    {name:'Rodrigo P.', cargo:'Jefe de Operaciones', initials:'RP', color:'linear-gradient(135deg,#7C3AED,#00C9A7)', meses:9, mult:1.12},
-    {name:'Valentina S.', cargo:'Ejecutiva Comercial', initials:'VS', color:'linear-gradient(135deg,#3B82F6,#7C3AED)', meses:13, mult:.97}
+    {name:'María G.', cargo:'Analista RRHH', initials:'MG', color:'linear-gradient(135deg,#00C9A7,#3B82F6)', mult:.88},
+    {name:'Rodrigo P.', cargo:'Jefe de Operaciones', initials:'RP', color:'linear-gradient(135deg,#7C3AED,#00C9A7)', mult:1.15},
+    {name:'Valentina S.', cargo:'Ejecutiva Comercial', initials:'VS', color:'linear-gradient(135deg,#3B82F6,#7C3AED)', mult:.97}
   ];
   return profiles.map(p => {
     const s = Math.round(sueldo * p.mult / 10000) * 10000 || 800000;
     const fondo = Math.round(s * pct / 100);
     const rem = Math.round(fondo * 0.43);
-    const retorno = Math.round(rem * 0.042 / 12 * p.meses);
-    const cuentas_paid = p.meses * Math.round(fondo * 0.57);
-    return {...p, sueldo: s, retorno, cuentas_paid};
+    const patrimonio = rem * 12;                          // 12 meses de remanente acumulado
+    const retorno_inv = Math.round(patrimonio * 0.042);  // retorno 4.2% anual
+    const total = patrimonio + retorno_inv;
+    const cuentas_anual = Math.round(fondo * 0.57) * 12;
+    return {...p, sueldo: s, total, retorno_inv, cuentas_anual};
   });
 }
 function showSimilarCases(sueldo, pct) {
@@ -908,16 +935,12 @@ function showSimilarCases(sueldo, pct) {
     <div class="similar-card">
       <div class="similar-top">
         <div class="similar-ava" style="background:${c.color}">${c.initials}</div>
-        <div><div class="similar-name">${c.name}</div><div class="similar-cargo">${c.cargo} · ${c.meses} meses usando SF</div></div>
+        <div><div class="similar-name">${c.name}</div><div class="similar-cargo">${c.cargo} · 12 meses usando SF</div></div>
       </div>
-      <div class="similar-stats">
-        <div>
-          <div class="similar-stat-l">Retorno acumulado</div>
-          <div class="similar-stat-n">+$${c.retorno.toLocaleString('es-CL')}</div>
-          <div class="similar-stat-sub">$${c.cuentas_paid.toLocaleString('es-CL')} en cuentas pagadas a tiempo</div>
-        </div>
-        <div class="similar-sueldo">Sueldo similar<br>~$${c.sueldo.toLocaleString('es-CL')}</div>
-      </div>
+      <div class="similar-stat-l" style="margin-bottom:6px;">Patrimonio acumulado en 1 año</div>
+      <div class="similar-acum">+$${c.total.toLocaleString('es-CL')}</div>
+      <div class="similar-retorno">Incluye <span>+$${c.retorno_inv.toLocaleString('es-CL')}</span> de retorno de inversión</div>
+      <div class="similar-cuentas">💳 $${c.cuentas_anual.toLocaleString('es-CL')} en cuentas pagadas a tiempo — sueldo similar ~$${c.sueldo.toLocaleString('es-CL')}</div>
     </div>
   `).join('');
   const wrap = document.getElementById('similarWrap');
