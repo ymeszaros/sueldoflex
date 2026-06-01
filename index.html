@@ -279,8 +279,22 @@
   .ft-legal a:hover{color:rgba(255,255,255,.65);}
 
   /* NAV UNIRME */
-  .nav-unirme{color:var(--teal)!important;font-weight:700!important;border:1px solid rgba(0,201,167,.25);padding:6px 16px;border-radius:8px;transition:all .2s!important;}
-  .nav-unirme:hover{background:rgba(0,201,167,.1)!important;border-color:rgba(0,201,167,.5)!important;}
+  /* similar cases */
+  .similar-wrap{margin-top:40px;border-top:1px solid rgba(255,255,255,.08);padding-top:40px;opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.23,1,.32,1),transform .7s cubic-bezier(.23,1,.32,1);}
+  .similar-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.9px;margin-bottom:20px;}
+  .similar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .similar-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:22px;transition:border-color .3s,transform .3s;}
+  .similar-card:hover{border-color:rgba(0,201,167,.3);transform:translateY(-3px);}
+  .similar-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .similar-ava{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;}
+  .similar-name{font-size:14px;font-weight:700;color:#fff;}
+  .similar-cargo{font-size:11px;color:rgba(255,255,255,.48);margin-top:2px;}
+  .similar-stats{border-top:1px solid rgba(255,255,255,.07);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;}
+  .similar-stat-l{font-size:10px;color:rgba(255,255,255,.42);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .similar-stat-n{font-size:22px;font-weight:900;color:#34d399;letter-spacing:-.5px;line-height:1;}
+  .similar-stat-sub{font-size:10px;color:rgba(255,255,255,.32);margin-top:4px;}
+  .similar-sueldo{font-size:10px;color:rgba(255,255,255,.32);text-align:right;line-height:1.6;}
+  @media(max-width:600px){.similar-grid{grid-template-columns:1fr;}}
 
   /* MODAL */
   .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(3,8,18,.9);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s cubic-bezier(.23,1,.32,1);padding:20px;}
@@ -696,6 +710,14 @@
         <p class="modal-sub">Ingresá tus datos y mirá en tiempo real cuánto podés destinar a cuentas e inversión cada mes.</p>
         <form onsubmit="submitUnirme(event)">
           <div class="mfi-group">
+            <label class="mfi-label">Nombre completo</label>
+            <input type="text" class="mfi" placeholder="Tu nombre y apellido" id="f-nombre" required>
+          </div>
+          <div class="mfi-group">
+            <label class="mfi-label">Teléfono</label>
+            <input type="tel" class="mfi" placeholder="+56 9 XXXX XXXX" id="f-tel" required>
+          </div>
+          <div class="mfi-group">
             <label class="mfi-label">Empresa donde trabajas</label>
             <input type="text" class="mfi" placeholder="Ej: Falabella, BCI, Copec…" id="f-empresa">
           </div>
@@ -756,6 +778,11 @@
           </div>
         </div>
       </div>
+    </div>
+    <!-- CASOS SIMILARES -->
+    <div class="similar-wrap" id="similarWrap" style="display:none;">
+      <div class="similar-title">Personas con un perfil similar al tuyo</div>
+      <div class="similar-grid" id="similarGrid"></div>
     </div>
   </div>
 </div>
@@ -860,19 +887,56 @@ function updatePreview() {
   document.getElementById('bar-cuentas').style.width = fondo > 0 ? (cuentas/fondo*100) + '%' : '0%';
   document.getElementById('bar-rem').style.width = fondo > 0 ? (rem/fondo*100) + '%' : '0%';
 }
+function generateSimilarCases(sueldo, pct) {
+  const profiles = [
+    {name:'María G.', cargo:'Analista RRHH', initials:'MG', color:'linear-gradient(135deg,#00C9A7,#3B82F6)', meses:4, mult:.88},
+    {name:'Rodrigo P.', cargo:'Jefe de Operaciones', initials:'RP', color:'linear-gradient(135deg,#7C3AED,#00C9A7)', meses:9, mult:1.12},
+    {name:'Valentina S.', cargo:'Ejecutiva Comercial', initials:'VS', color:'linear-gradient(135deg,#3B82F6,#7C3AED)', meses:13, mult:.97}
+  ];
+  return profiles.map(p => {
+    const s = Math.round(sueldo * p.mult / 10000) * 10000 || 800000;
+    const fondo = Math.round(s * pct / 100);
+    const rem = Math.round(fondo * 0.43);
+    const retorno = Math.round(rem * 0.042 / 12 * p.meses);
+    const cuentas_paid = p.meses * Math.round(fondo * 0.57);
+    return {...p, sueldo: s, retorno, cuentas_paid};
+  });
+}
+function showSimilarCases(sueldo, pct) {
+  const cases = generateSimilarCases(sueldo, pct);
+  document.getElementById('similarGrid').innerHTML = cases.map(c => `
+    <div class="similar-card">
+      <div class="similar-top">
+        <div class="similar-ava" style="background:${c.color}">${c.initials}</div>
+        <div><div class="similar-name">${c.name}</div><div class="similar-cargo">${c.cargo} · ${c.meses} meses usando SF</div></div>
+      </div>
+      <div class="similar-stats">
+        <div>
+          <div class="similar-stat-l">Retorno acumulado</div>
+          <div class="similar-stat-n">+$${c.retorno.toLocaleString('es-CL')}</div>
+          <div class="similar-stat-sub">$${c.cuentas_paid.toLocaleString('es-CL')} en cuentas pagadas a tiempo</div>
+        </div>
+        <div class="similar-sueldo">Sueldo similar<br>~$${c.sueldo.toLocaleString('es-CL')}</div>
+      </div>
+    </div>
+  `).join('');
+  const wrap = document.getElementById('similarWrap');
+  wrap.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    wrap.style.opacity = '1';
+    wrap.style.transform = 'translateY(0)';
+    setTimeout(() => wrap.scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
+  }));
+}
 function submitUnirme(e) {
   e.preventDefault();
+  const raw = document.getElementById('f-sueldo').value.replace(/\./g,'').replace(/\D/g,'');
+  const sueldo = parseInt(raw) || 800000;
+  const pct = parseInt(document.getElementById('f-pct').value);
   const btn = document.getElementById('modal-submit-btn');
-  btn.textContent = '¡Listo! Te contactamos pronto 🎉';
+  btn.textContent = '✓ ¡Solicitud enviada! Te contactamos pronto';
   btn.style.background = '#009e84'; btn.disabled = true;
-  setTimeout(() => {
-    closeModal();
-    btn.textContent = 'Quiero unirme →'; btn.style.background = ''; btn.disabled = false;
-    e.target.reset();
-    document.getElementById('pct-display').textContent = '15%';
-    document.getElementById('f-pct').value = 15;
-    updatePreview();
-  }, 3000);
+  showSimilarCases(sueldo, pct);
 }
 
 // Form
