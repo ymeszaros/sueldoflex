@@ -589,27 +589,27 @@
 <!-- STATS -->
 <div class="sw stats-wrap" style="padding:130px 56px;">
   <div class="inner" style="position:relative;z-index:1;">
-    <div class="tag dark reveal"><div class="tag-dot"></div>El impacto</div>
-    <h2 class="h2 dark reveal">Un hábito financiero<br>que se instala solo</h2>
-    <p class="lead dark reveal">No le pedimos al trabajador que ahorre por voluntad propia. SueldoFlex lo hace de forma automática — y eso lo cambia todo.</p>
+    <div class="tag dark reveal"><div class="tag-dot"></div>Por qué importa</div>
+    <h2 class="h2 dark reveal">Los números que<br>nadie quiere ver</h2>
+    <p class="lead dark reveal">Chile tiene un problema silencioso de bienestar financiero laboral. SueldoFlex lo resuelve de raíz.</p>
     <div class="stat-grid reveal">
       <div class="stat">
-        <span class="stat-icon">😌</span>
-        <div class="stat-n" data-count="0" data-suffix="">0</div>
-        <div class="stat-t">Cuentas atrasadas al año</div>
-        <div class="stat-d">Todas tus cuentas básicas pagadas antes del vencimiento, todos los meses, sin que tengas que hacer nada.</div>
+        <span class="stat-icon">😰</span>
+        <div class="stat-n" data-count="70" data-suffix="%">0%</div>
+        <div class="stat-t">De familias chilenas con cuentas atrasadas</div>
+        <div class="stat-d">7 de cada 10 hogares atrasa al menos una cuenta básica al año por falta de liquidez al fin de mes. (CASEN 2022)</div>
       </div>
       <div class="stat">
-        <span class="stat-icon">📈</span>
-        <div class="stat-n">+$2.700</div>
-        <div class="stat-t">Retorno anual estimado</div>
-        <div class="stat-d">Del remanente invertido por un trabajador con sueldo de $1.000.000 y cuentas básicas de $85K al mes.</div>
+        <span class="stat-icon">💰</span>
+        <div class="stat-n" data-count="800000" data-format="clp">+$0</div>
+        <div class="stat-t">Patrimonio acumulado en tu primer año</div>
+        <div class="stat-d">Lo que construye un trabajador de $1.000.000 usando SueldoFlex durante 12 meses — sin hacer absolutamente nada.</div>
       </div>
       <div class="stat">
-        <span class="stat-icon">🔄</span>
-        <div class="stat-n" data-count="100" data-suffix="%">0%</div>
-        <div class="stat-t">Sostenible mes a mes</div>
-        <div class="stat-d">Trabajas siempre con tu propio dinero. El siguiente mes partes exactamente igual, sin rastro de lo que pagaste.</div>
+        <span class="stat-icon">🛡️</span>
+        <div class="stat-n">$0</div>
+        <div class="stat-t">En deuda ni intereses. Jamás.</div>
+        <div class="stat-d">A diferencia de los adelantos de sueldo, SueldoFlex trabaja solo con tu propio dinero. Sin créditos, sin riesgos, sin trampa.</div>
       </div>
     </div>
   </div>
@@ -847,13 +847,15 @@ document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 function animateCount(el) {
   const target = parseInt(el.dataset.count);
   const suffix = el.dataset.suffix || '';
+  const format = el.dataset.format || '';
   if(isNaN(target)) return;
-  const duration = 2200;
+  const duration = 2400;
   const start = performance.now();
   const update = t => {
     const p = Math.min((t - start) / duration, 1);
     const eased = 1 - Math.pow(1 - p, 4);
-    el.textContent = Math.round(eased * target) + suffix;
+    const val = Math.round(eased * target);
+    el.textContent = format === 'clp' ? '+$' + val.toLocaleString('es-CL') : val + suffix;
     if(p < 1) requestAnimationFrame(update);
   };
   requestAnimationFrame(update);
